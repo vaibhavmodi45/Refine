@@ -1,0 +1,74 @@
+You are a senior software architect and full-stack developer specializing in Next.js, TypeScript, and production-grade web applications. You are tasked with building "Refine", an AI-powered ATS Resume Builder and Job-Specific Resume Optimizer.
+
+PRODUCT REQUIREMENTS (condensed from the official master spec):
+- Help users create, upload, edit, optimize, score, and download ATS-friendly resumes tailored to specific job descriptions.
+- Core features: Resume creation from scratch with 3 ATS templates (Professional Classic, Modern Professional, Fresher Graduate), all sections editable (personal info, summary, education, experience, projects, skills, certifications, achievements, languages, links), resume versioning, upload PDF/DOCX to parse into structured JSON, job description pasting for ATS/match scoring and keyword/missing skills reports, AI-powered wording improvement (optional, free models only, must never fabricate info), PDF generation that matches preview perfectly.
+- Constraints: Use free and open-source technologies wherever possible. AI must be an enhancement layer, not a dependency. ATS compatibility is paramount, deterministic scoring methods first. Resume formatting must never break.
+
+TECH STACK (decided):
+- Frontend & API: Next.js 14 (App Router) with TypeScript, TailwindCSS, shadcn/ui
+- Database: PostgreSQL with Prisma ORM
+- Auth: NextAuth.js v5 (credentials + OAuth)
+- Queue: BullMQ + Redis for background tasks (parsing, scoring, PDF)
+- Resume Parsing: pdf-parse (PDF), mammoth (DOCX), custom NLP using "natural" and "compromise"
+- PDF Generation: Puppeteer + Handlebars (or React rendering)
+- Storage: Local filesystem (MVP), later MinIO
+- AI (optional): OpenRouter free models, HuggingFace free tier, with strict validation to prevent fabrication
+- Testing: Vitest, Playwright
+- Monorepo: npm workspaces with apps/web (Next.js) and packages/shared, plus a workers/ directory for background job processors
+
+PROJECT STRUCTURE (monorepo):
+refine/
+├── apps/
+│   └── web/                 # Next.js app (App Router)
+│       ├── app/             # layout, pages, api routes
+│       ├── components/      # ui components (shadcn)
+│       ├── lib/             # db, parsers, scorers, ai, pdf
+│       ├── workers/         # BullMQ processors (run in same process for MVP)
+│       └── public/
+├── packages/
+│   └── shared/              # types, constants, resume schema
+├── workers/                 # eventual separate worker service (Node.js)
+├── docker-compose.yml       # postgres, redis, minio (dev)
+├── package.json             # workspaces root
+└── ...configs
+
+DATABASE SCHEMA (Prisma) - will be in packages/shared/prisma/schema.prisma:
+- User (id, email, name, resumes)
+- Resume (id, userId, title, versions)
+- ResumeVersion (id, resumeId, versionNumber, label, structuredData Json, isCurrent, analyses)
+- JobDescription (id, userId, title, description, analyses)
+- Analysis (id, resumeVersionId, jobDescriptionId, atsScore, matchScore, keywordReport Json, missingSkills Json, improvements Json)
+
+DEVELOPMENT PHASE: We are currently at Phase 0 – Project Setup. Your task is to generate all necessary configuration and scaffolding files so that the monorepo is ready to run `npm install` and `npm run dev` in the web app with a working dev environment (Postgres/Redis via Docker).
+
+STEP-BY-STEP GENERATION:
+1. Root `package.json` with npm workspaces (apps/web, packages/shared). Include scripts for dev, build, lint, and workspace commands.
+2. `apps/web/package.json` with Next.js, React, TypeScript, TailwindCSS, shadcn/ui initial dependencies (use latest stable versions). Include scripts for dev, build, start, lint.
+3. `packages/shared/package.json` with TypeScript and shared dependencies. Export common types and resume JSON schema.
+4. `tsconfig.json` base and project-specific tsconfigs (paths aliases).
+5. `next.config.js` (or next.config.ts) for Next.js with any necessary config (experimental server actions, etc.).
+6. `tailwind.config.ts` and `postcss.config.js` in apps/web.
+7. `apps/web/src/app/layout.tsx` and basic `page.tsx` with a "Hello Refine" placeholder.
+8. `packages/shared/src/types/resume.ts` – define the TypeScript interface for the structured resume data (exactly matching the JSON schema from the spec: name, contact, skills[], projects[], experience[], education[], etc.).
+9. `packages/shared/prisma/schema.prisma` – complete schema as described.
+10. `docker-compose.yml` at root with PostgreSQL 16 and Redis 7 services, with volumes and ports exposed.
+11. `.env.example` in root and apps/web with placeholders for DATABASE_URL, NEXTAUTH_SECRET, REDIS_URL, etc.
+12. Basic BullMQ queue setup: `apps/web/lib/queue.ts` that initializes a Queue using Redis URL from env, exporting it for use in API routes and workers.
+13. A simple `apps/web/workers/processors.ts` that defines empty worker processors (parse-resume, score-ats, generate-pdf) – these will be filled later but the infrastructure should be there.
+14. `apps/web/lib/db.ts` – Prisma client singleton.
+15. A minimal `apps/web/app/api/auth/[...nextauth]/route.ts` that sets up NextAuth with a credentials provider (just the skeleton, not full logic yet) to verify later.
+16. Add a `.gitignore` at root ignoring node_modules, .env, dist, .next, etc.
+17. A `README.md` at root briefly describing the project and how to start.
+
+OUTPUT FORMAT:
+For each file, provide the complete path and contents in a code block. After generating all files, give the sequence of terminal commands to run (e.g., `npm install`, `docker-compose up -d`, `npx prisma migrate dev --schema=packages/shared/prisma/schema.prisma`, `npm run dev -w apps/web`). Also, list any additional steps to verify the setup (e.g., visiting localhost:3000).
+
+IMPORTANT NOTES:
+- Use precise TypeScript, no `any`.
+- Ensure all configurations are compatible with the latest versions of Next.js, Prisma, NextAuth, BullMQ, and TailwindCSS.
+- Keep it production-ready but minimal for MVP.
+- Follow the architectural decisions explained before: no AI for now, deterministic scoring only in initial phases, but leave placeholders for AI enhancement.
+- Do not over-engineer; generate exactly what's requested to kickstart the project, not the full app.
+
+Now, generate the complete Phase 0 codebase exactly as described.
